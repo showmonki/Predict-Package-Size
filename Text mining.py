@@ -1,10 +1,13 @@
 import re
 import jieba
-#import jieba.analyse
+import os
+from datetime import datetime as dt
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
@@ -68,8 +71,16 @@ for i in data.index.tolist():
 				words.append("".join(word))
 		data.loc[i,'words']=" ".join(words)
 x = data['words']
-y = data['PACKSIZE']
+le = LabelEncoder().fit(data['PACKSIZE'])
+y = le.transform(data['PACKSIZE'])
 
+train_vectorizer = TfidfVectorizer()
+train_tfidf = train_vectorizer.fit_transform(x)
+x_matrix = pd.DataFrame(train_tfidf.toarray())
+x_matrix.columns =train_vectorizer.get_feature_names()
+
+
+'''
 x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=1)
 
 train_vectorizer = TfidfVectorizer(max_features=500)
@@ -81,16 +92,25 @@ test_vectorizer = TfidfVectorizer(max_features=500)
 test_tfidf = test_vectorizer.fit_transform(x_test)
 x_test_matrix = pd.DataFrame(test_tfidf.toarray())
 x_test_matrix.columns =test_vectorizer.get_feature_names()
+'''
 
-clf = KNeighborsClassifier()
-clf = SVC()
-clf = DecisionTreeClassifier()
-clf = RandomForestClassifier()
-clf = GaussianNB()
-clf = GradientBoostingClassifier()
-clf.fit(x_train_matrix,y_train)
-test_acc = clf.score(x_test_matrix, y_test)
-print(test_acc)
+clfs = [KNeighborsClassifier(),SVC(),DecisionTreeClassifier(),RandomForestClassifier(),GaussianNB(),GradientBoostingClassifier()]
+'''
+#train_test_split for loop
+for clf in clfs:
+	clf.fit(x_train_matrix,y_train)
+	test_acc = clf.score(x_test_matrix, y_test)
+	print(clf,test_acc)
+'''
+for clf in clfs:
+	cv_results = cross_val_score(clf, x_matrix, y)
+	sorted(cv_results.keys())
+#['fit_time', 'score_time', 'test_score']
+	cv_results['test_score']
+	time = dt.now().strftime("%Y-%m-%d %H:%M:%S")
+	#("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+	#open(os.path.join(info, '/transfer/package_predict_log_file.txt'), 'a+').write(time+'\t'+clf+'\t'+predict_result+'\n')
+
 #y_t = clf.predict(x_test)
-predict = pd.DataFrame({'predict':y_t,'test':y_test})
+#predict = pd.DataFrame({'predict':y_t,'test':y_test})
 
